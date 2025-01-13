@@ -143,7 +143,7 @@ picam1.configure(picam1.create_video_configuration(
         buffer_count = 3,
         queue = False,
         main={"size": (1640, 1232),"format": "YUV420"},
-        lores={"size": (480, 360)},
+        lores={"size": (960, 720)},
         encode="lores",
         display="lores",
         transform=Transform(rotation=90)))
@@ -157,7 +157,7 @@ picam2.configure(picam2.create_video_configuration(
         buffer_count = 3,
         queue = False,
         main={"size": (1640, 1232),"format": "YUV420"},
-        lores={"size": (480, 360)},
+        lores={"size": (960, 720)},
         encode="lores",
         display="lores",
         transform=Transform(rotation=270)))
