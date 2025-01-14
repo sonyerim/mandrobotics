@@ -41,7 +41,7 @@ PAGE = """\
 
       img {
         position: absolute;
-        left: -17%;
+        left: -{left_value}%;
         transform: rotate(90deg);
         width: auto;
         height: 100%;
@@ -53,7 +53,7 @@ PAGE = """\
 
       img {
         position: absolute;
-        right: -17%;
+        right: -{right_value}%;
         transform: rotate(270deg);
         width: auto;
         height: 100%;
@@ -75,6 +75,8 @@ PAGE = """\
 </body>
 </html>"""
 
+left_value = 17
+right_value = 17
 
 class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
@@ -93,13 +95,13 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.send_header('Location', '/index.html')
             self.end_headers()
         elif self.path == '/index.html':
-            content = PAGE.encode('utf-8')
+            content = PAGE_TEMPLATE.format(left_value=left_value, right_value=right_value).encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'text/html')
             self.send_header('Content-Length', len(content))
             self.end_headers()
             self.wfile.write(content)
-        elif self.path == '/stream1.mjpg':
+        elif self.path in ['/stream1.mjpg', '/stream2.mjpg']:
             self.send_response(200)
             self.send_header('Age', 0)
             self.send_header('Cache-Control', 'no-cache, private')
@@ -107,10 +109,11 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
             self.end_headers()
             try:
+                output = output1 if self.path == '/stream1.mjpg' else output2
                 while True:
-                    with output1.condition:
-                        output1.condition.wait()
-                        frame = output1.frame
+                    with output.condition:
+                        output.condition.wait()
+                        frame = output.frame
                     self.wfile.write(b'--FRAME\r\n')
                     self.send_header('Content-Type', 'image/jpeg')
                     self.send_header('Content-Length', len(frame))
@@ -118,31 +121,22 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                     self.wfile.write(frame)
                     self.wfile.write(b'\r\n')
             except Exception as e:
-                logging.warning(
-                    'Removed streaming client %s: %s',
-                    self.client_address, str(e))
-        elif self.path == '/stream2.mjpg':
-            self.send_response(200)
-            self.send_header('Age', 0)
-            self.send_header('Cache-Control', 'no-cache, private')
-            self.send_header('Pragma', 'no-cache')
-            self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
+                logging.warning('Removed streaming client %s: %s', self.client_address, str(e))
+        else:
+            self.send_error(404)
             self.end_headers()
-            try:
-                while True:
-                    with output2.condition:
-                        output2.condition.wait()
-                        frame = output2.frame
-                    self.wfile.write(b'--FRAME\r\n')
-                    self.send_header('Content-Type', 'image/jpeg')
-                    self.send_header('Content-Length', len(frame))
-                    self.end_headers()
-                    self.wfile.write(frame)
-                    self.wfile.write(b'\r\n')
-            except Exception as e:
-                logging.warning(
-                    'Removed streaming client %s: %s',
-                    self.client_address, str(e))
+
+    def do_POST(self):
+        if self.path == '/update':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length).decode('utf-8')
+            params = parse_qs(post_data)
+            global left_value, right_value
+            left_value = int(params.get('left', [left_value])[0])
+            right_value = int(params.get('right', [right_value])[0])
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'Values updated')
         else:
             self.send_error(404)
             self.end_headers()
