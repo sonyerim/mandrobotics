@@ -36,30 +36,29 @@ PAGE = """\
     border: 0px solid grey;
 
     &.hori_1 {
-      width: 480px;
-      height: 640px;
+      width: 400px;
+      height: 400px;
 
       img {
         position: absolute;
-        left: -25%;
+        left: -17%;
         transform: rotate(90deg);
         width: auto;
         height: 100%;
       }
     }
     &.hori_2 {
-      width: 480px;
-      height: 640px;
+      width: 400px;
+      height: 400px;
 
       img {
         position: absolute;
-        left: -50%;
+        right: -17%;
         transform: rotate(270deg);
         width: auto;
         height: 100%;
       }
     }
-
   }
 }
 </style>
