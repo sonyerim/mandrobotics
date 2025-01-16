@@ -1,82 +1,78 @@
 #!/usr/bin/python3
 
-# This is the same as mjpeg_server.py, but uses the h/w MJPEG encoder.
-
 import io
 import logging
 import socketserver
 from http import server
 from threading import Condition
+from urllib.parse import parse_qs
 
 from picamera2 import Picamera2
 from picamera2.encoders import MJPEGEncoder
 from picamera2.outputs import FileOutput
 
 from libcamera import Transform
-from libcamera import Rectangle
 
-PAGE = """\
+PAGE_TEMPLATE = """\
 <html>
 <head>
 <title>Picamera2 MJPEG Streaming Demo</title>
 <style>
-  body {
+  body {{
     background: black;
     margin: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-  }
-  .case {
+  }}
+  .case {{
     display: flex;
-  .box {
+  }}
+  .box {{
     overflow: hidden;
     position: relative;
     border: 0px solid grey;
-
-    &.hori_1 {
-      width: 400px;
-      height: 400px;
-
-      img {
-        position: absolute;
-        left: -{left_value}%;
-        transform: rotate(90deg);
-        width: auto;
-        height: 100%;
-      }
-    }
-    &.hori_2 {
-      width: 400px;
-      height: 400px;
-
-      img {
-        position: absolute;
-        right: -{right_value}%;
-        transform: rotate(270deg);
-        width: auto;
-        height: 100%;
-      }
-    }
-  }
-}
+  }}
+  .hori_1 {{
+    width: 400px;
+    height: 400px;
+  }}
+  .hori_1 img {{
+    position: absolute;
+    left: -{left_value}%;
+    transform: rotate(90deg);
+    width: auto;
+    height: 100%;
+  }}
+  .hori_2 {{
+    width: 400px;
+    height: 400px;
+  }}
+  .hori_2 img {{
+    position: absolute;
+    right: -{right_value}%;
+    transform: rotate(270deg);
+    width: auto;
+    height: 100%;
+  }}
 </style>
 </head>
 <body>
 <div class="case">
-      <div class="box hori_1">
+    <div class="box hori_1">
         <img src="stream1.mjpg">
-      </div> 
-      <div class="box hori_2">
-        <img src="stream2.mjpg">
-      </div> 
     </div>
+    <div class="box hori_2">
+        <img src="stream2.mjpg">
+    </div>
+</div>
 </body>
 </html>"""
 
 left_value = 17
 right_value = 17
+
 
 class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
@@ -87,6 +83,7 @@ class StreamingOutput(io.BufferedIOBase):
         with self.condition:
             self.frame = buf
             self.condition.notify_all()
+
 
 class StreamingHandler(server.BaseHTTPRequestHandler):
     def do_GET(self):
@@ -148,28 +145,26 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
 
 
 picam1 = Picamera2(0)
-picam1.options["quality"] = 65
 picam1.configure(picam1.create_video_configuration(
-        buffer_count = 3,
-        queue = False,
-        main={"size": (1640, 1232),"format": "YUV420"},
-        lores={"size": (960, 720)},
-        encode="lores",
-        display="lores",
-        transform=Transform(rotation=90)))
+    buffer_count=3,
+    main={"size": (1640, 1232), "format": "YUV420"},
+    lores={"size": (960, 720)},
+    encode="lores",
+    display="lores",
+    transform=Transform(rotation=90)
+))
 output1 = StreamingOutput()
 picam1.start_recording(MJPEGEncoder(), FileOutput(output1))
 
 picam2 = Picamera2(1)
-picam2.options["quality"] = 65
 picam2.configure(picam2.create_video_configuration(
-        buffer_count = 3,
-        queue = False,
-        main={"size": (1640, 1232),"format": "YUV420"},
-        lores={"size": (960, 720)},
-        encode="lores",
-        display="lores",
-        transform=Transform(rotation=270)))
+    buffer_count=3,
+    main={"size": (1640, 1232), "format": "YUV420"},
+    lores={"size": (960, 720)},
+    encode="lores",
+    display="lores",
+    transform=Transform(rotation=270)
+))
 output2 = StreamingOutput()
 picam2.start_recording(MJPEGEncoder(), FileOutput(output2))
 
@@ -180,4 +175,3 @@ try:
 finally:
     picam1.stop_recording()
     picam2.stop_recording()
-
