@@ -1,0 +1,42 @@
+    <script>
+        $(document).ready(function(){
+            let reversedItems = [];
+            let currentPlaylistIndex = Math.floor(Math.random() * playlistIds.length);
+
+            const playlistIds = [
+            "PLbw9lbKbmawlfk7HzzFgxy-TXQV05d8n6",
+            "PLbw9lbKbmawmCjgYY2cYzH_iYVCfQiKUh",
+            "PLbw9lbKbmawnagLhVVDWw78683dinbVYb",
+            "PLbw9lbKbmawnLbPCzS6RSP1S2Ei8T0Oji"
+        ];
+  
+            function loadVideos(pageToken = "EAAajgFQVDpDRFFpRUVZMk1EQTNSalJCTVVZNU5VTXdReklvQVVpZW1ybmdzc3lIQTFBQldrVWlRMmxLVVZSSFNqTlBWM2hwVXpKS2RGbFlaSFZVUjBwUlVUTndWRTVzU2xSVlJFWlVUV3WlVUV3RXY0U5R1VYZFVNbkJ3UldkM1NXNWlNbVYwVVZsUmMweGhUakpuVFNJ") {
+                const currentPlaylistId = playlistIds[currentPlaylistIndex];
+                $.ajax({
+                    type: "GET",
+                    dataType: "json",
+                    url: `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${currentPlaylistId}&type=video&maxResults=8&pageToken=${pageToken}&key=AIzaSyAB9RNZMi7AB5qmEn0SKOD2UQd3XvUgj38`,
+                    contentType: "application/json",
+                    success: function(data) {
+                        console.log(data);
+                        const newItems = data.items.reverse();
+                        const currentLength = reversedItems.length;
+                        reversedItems = reversedItems.concat(newItems);
+
+                        for (let i = 0; i < newItems.length; i++) {
+                            const itemIndex = currentLength + i + 1;
+                            $('#title' + itemIndex).text(newItems[i].snippet.title);
+                            $('#video' + itemIndex).attr('src', 'https://www.youtube.com/embed/' + newItems[i].snippet.resourceId.videoId);
+                        }
+
+                    },
+                    error: function(xhr, status, error) {
+                        console.log("YouTube request error: " + error);
+                    }
+                });
+            }
+
+            loadVideos();
+        });
+    </script>
+
