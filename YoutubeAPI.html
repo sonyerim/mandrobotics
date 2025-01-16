@@ -1,0 +1,36 @@
+    <script>
+        $(document).ready(function() {
+            let videoItems = [];
+
+            function loadVideos(pageToken = "") {
+                const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=8&channelId=UCjG2dC5NV17K2EWCANMGAMg&order=date&type=video&key=AIzaSyAB9RNZMi7AB5qmEn0S>
+
+                $.ajax({
+                    type: "GET",
+                    dataType: "json",
+                    url: apiUrl,
+                    contentType: "application/json",
+                    success: function(data) {
+                        console.log(data);
+
+                        videoItems = videoItems.concat(data.items);
+
+                        data.items.forEach((item, index) => {
+                            const itemIndex = videoItems.length - data.items.length + index + 1;
+                            $('#title' + itemIndex).text(item.snippet.title);
+                            $('#video' + itemIndex).attr('src', 'https://www.youtube.com/embed/' + item.id.videoId);
+                        });
+
+                        if (data.nextPageToken) {
+                            loadVideos(data.nextPageToken);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("YouTube API 요청 실패: " + error);
+                    }
+                });
+            }
+
+            loadVideos();
+        });
+    </script>
