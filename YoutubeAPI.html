@@ -3,7 +3,7 @@
             let videoItems = [];
 
             function loadVideos(pageToken = "") {
-                const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=8&channelId=[ID]&order=date&type=video&key=[YOUR_API_KEY]`
+                const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=8&channelId={ID}&order=date&type=video&key={YOUR_API_KEY}`
 
                 $.ajax({
                     type: "GET",
