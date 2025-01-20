@@ -85,33 +85,25 @@ class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
         self.frame = None
         self.condition = Condition()
+        self.map1, self.map2 = None, None
 
-    def write(self, buf):
-        with self.condition:
-            np_arr = np.frombuffer(buf, np.uint8)
-            image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
-            distorted_image = self.barrel_distortion(image)
-
-            _, encoded_image = cv2.imencode('.jpg', distorted_image)
-            self.frame = encoded_image.tobytes()
-            self.condition.notify_all()
-
-    @staticmethod
-    def barrel_distortion(image):
-        height, width = image.shape[:2]
-
+    def configure_distortion_map(self, width, height):
         camera_matrix = np.array([[width, 0, width / 2],
-                                   [0, height, height / 2],
-                                   [0, 0, 1]], dtype=np.float32)
+                                  [0, height, height / 2],
+                                  [0, 0, 1]], dtype=np.float32)
         distortion_coefficients = np.array([0.3, 0.1, 0, 0], dtype=np.float32)
+        new_camera_matrix, _ = cv2.getOptimalNewCameraMatrix(camera_matrix, distortion_coefficients, 
+                                                             (width, height), 1)
+        self.map1, self.map2 = cv2.initUndistortRectifyMap(
+            camera_matrix, distortion_coefficients, None, new_camera_matrix, 
+            (width, height), cv2.CV_32FC1)
 
-        new_camera_matrix, _ = cv2.getOptimalNewCameraMatrix(camera_matrix, distortion_coefficients, (width,>
-        map1, map2 = cv2.initUndistortRectifyMap(camera_matrix, distortion_coefficients, None, new_camera_ma>
-                                                 (width, height), cv2.CV_32FC1)
-        distorted_image = cv2.remap(image, map1, map2, cv2.INTER_LINEAR)
+    def barrel_distortion(self, image):
+        if self.map1 is None or self.map2 is None:
+            height, width = image.shape[:2]
+            self.configure_distortion_map(width, height)
+        return cv2.remap(image, self.map1, self.map2, cv2.INTER_LINEAR)
 
-        return distorted_image
 
 
 class StreamingHandler(server.BaseHTTPRequestHandler):
