@@ -80,30 +80,47 @@ PAGE_TEMPLATE = """\
 left_value = 17
 right_value = 17
 
+def crop_to_square(image):
+    height, width = image.shape[:2]
+    size = min(width, height)
+    x_center, y_center = width // 2, height // 2
+    x_start = max(0, x_center - size // 2)
+    y_start = max(0, y_center - size // 2)
+    return image[y_start:y_start + size, x_start:x_start + size]
 
 class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
         self.frame = None
         self.condition = Condition()
-        self.map1, self.map2 = None, None
 
-    def configure_distortion_map(self, width, height):
+    def write(self, buf):
+        with self.condition:
+            np_arr = np.frombuffer(buf, np.uint8)
+            image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+            distorted_image = self.barrel_distortion(image)
+
+            _, encoded_image = cv2.imencode('.jpg', distorted_image)
+            self.frame = encoded_image.tobytes()
+            self.condition.notify_all()
+
+    @staticmethod
+    def barrel_distortion(image):
+        square_image = crop_to_square(image)
+
+        height, width = square_image.shape[:2]
+
         camera_matrix = np.array([[width, 0, width / 2],
-                                  [0, height, height / 2],
-                                  [0, 0, 1]], dtype=np.float32)
+                                   [0, height, height / 2],
+                                   [0, 0, 1]], dtype=np.float32)
         distortion_coefficients = np.array([0.3, 0.1, 0, 0], dtype=np.float32)
-        new_camera_matrix, _ = cv2.getOptimalNewCameraMatrix(camera_matrix, distortion_coefficients, 
-                                                             (width, height), 1)
-        self.map1, self.map2 = cv2.initUndistortRectifyMap(
-            camera_matrix, distortion_coefficients, None, new_camera_matrix, 
-            (width, height), cv2.CV_32FC1)
 
-    def barrel_distortion(self, image):
-        if self.map1 is None or self.map2 is None:
-            height, width = image.shape[:2]
-            self.configure_distortion_map(width, height)
-        return cv2.remap(image, self.map1, self.map2, cv2.INTER_LINEAR)
+        new_camera_matrix, _ = cv2.getOptimalNewCameraMatrix(camera_matrix, distortion_coefficients, (width, height), 1)
+        map1, map2 = cv2.initUndistortRectifyMap(camera_matrix, distortion_coefficients, None, new_camera_matrix,
+                                                 (width, height), cv2.CV_32FC1)
+        distorted_image = cv2.remap(square_image, map1, map2, cv2.INTER_LINEAR)
 
+        return distorted_image
 
 
 class StreamingHandler(server.BaseHTTPRequestHandler):
