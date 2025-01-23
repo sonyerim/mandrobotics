@@ -73,8 +73,8 @@ PAGE_TEMPLATE = """\
 </body>
 </html>"""
 
-left_value = -17
-right_value = -17
+left_value = 17
+right_value = 17
 distorted = False
 
 def crop_to_square(image):
